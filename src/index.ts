@@ -137,3 +137,4 @@ async function getApplicationStatus(
     }
   }
 }
+

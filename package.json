@@ -18,6 +18,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "canvas": "^3.1.0",
     "cookie": "^1.0.2",
     "date-fns": "^4.1.0",
     "jsdom": "^26.0.0",

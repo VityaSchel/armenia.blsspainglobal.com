@@ -168,6 +168,7 @@ async function submitCaptcha({
       captchaId: string
     }
     if (!submitCaptchaResponse.success) {
+      console.error('Captcha submission failed TODO: retry')
       throw new Error('Captcha submission failed')
     }
     return submitCaptchaResponse.captchaId
