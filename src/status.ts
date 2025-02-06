@@ -86,7 +86,7 @@ const errors: { [key: string]: string } = {
   'Date of birth is not correct': 'Неверно указана дата рождения',
 }
 
-async function getApplicationStatus(
+export async function getApplicationStatus(
   referenceNumber: string,
   dateOfBirth: Date,
 ) {
@@ -137,4 +137,3 @@ async function getApplicationStatus(
     }
   }
 }
-

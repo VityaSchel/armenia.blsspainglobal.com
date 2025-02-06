@@ -1,6 +1,6 @@
 import { JSDOM } from 'jsdom'
 import { userAgent } from './consts'
-import { getCaptchaSolution } from './captcha-solve'
+import { getCaptchaSolution, reportSolutionResult } from './captcha-solve'
 import cookie from 'cookie'
 
 export async function getCaptchaGenToken() {
@@ -168,8 +168,7 @@ async function submitCaptcha({
       captchaId: string
     }
     if (!submitCaptchaResponse.success) {
-      console.error('Captcha submission failed TODO: retry')
-      throw new Error('Captcha submission failed')
+      return false
     }
     return submitCaptchaResponse.captchaId
   } catch {
@@ -186,14 +185,30 @@ export async function solveCaptcha() {
   const { taskText, panels, captchaId, requestVerificationToken } =
     await parseCaptchaHTML(captchaHtml)
   console.log('[4/5] Solving captcha...')
-  const selectedPanelsIds = await getCaptchaSolution({ task: taskText, panels })
-  console.log('[5/5] Submitting captcha solution...')
-  const successCaptchaId = await submitCaptcha({
-    selectedPanelsIds,
-    captchaId,
-    requestVerificationToken,
-    cookies,
-    dataArg,
-  })
-  return successCaptchaId
+  let attempt = 0
+  do {
+    const { selection, rucaptchaTaskId } = await getCaptchaSolution({
+      task: taskText,
+      panels,
+    })
+    console.log('[5/5] Submitting captcha solution... Attempt', ++attempt)
+    const successCaptchaId = await submitCaptcha({
+      selectedPanelsIds: selection,
+      captchaId,
+      requestVerificationToken,
+      cookies,
+      dataArg,
+    })
+    if (successCaptchaId === false) {
+      if (rucaptchaTaskId !== null) {
+        await reportSolutionResult(rucaptchaTaskId, false)
+      }
+    } else {
+      if (rucaptchaTaskId !== null) {
+        await reportSolutionResult(rucaptchaTaskId, true)
+      }
+      return successCaptchaId
+    }
+  } while (attempt < 3)
+  throw new Error('Could not solve captcha')
 }
