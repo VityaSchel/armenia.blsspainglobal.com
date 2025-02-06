@@ -1,0 +1,26 @@
+{
+  "name": "armenia.blsspainglobal.com",
+  "module": "src/index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@eslint/compat": "1.2.5",
+    "@eslint/js": "9.18.0",
+    "@types/bun": "latest",
+    "@types/date-fns": "^2.6.3",
+    "@types/jsdom": "^21.1.7",
+    "@types/prompts": "^2.4.9",
+    "eslint": "9.18.0",
+    "eslint-plugin-prettier": "^5.2.3",
+    "prettier": "3.4.2",
+    "typescript-eslint": "8.20.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "cookie": "^1.0.2",
+    "date-fns": "^4.1.0",
+    "jsdom": "^26.0.0",
+    "prompts": "^2.4.2"
+  }
+}
