@@ -32,6 +32,7 @@ const userDb = new Map<
     savedApplications: {
       referenceNumber: string
       dateOfBirth: number
+      addedAt: number
       name: string
     }[]
   }
@@ -51,16 +52,18 @@ async function parseDb() {
     const del1 = line.indexOf('\t')
     const del2 = line.indexOf('\t', del1 + 1)
     const del3 = line.indexOf('\t', del2 + 1)
+    const del4 = line.indexOf('\t', del3 + 1)
     const id = Number(line.substring(0, del1))
     const referenceNumber = line.substring(del1 + 1, del2)
-    const dateOfBirth = Number(line.substring(del2 + 1, del3))
-    const name = line.substring(del3 + 1)
+    const addedAt = Number(line.substring(del2 + 1, del3))
+    const dateOfBirth = Number(line.substring(del3 + 1, del4))
+    const name = line.substring(del4 + 1)
     if (!userDb.has(id)) {
       userDb.set(id, { savedApplications: [] })
     }
     userDb
       .get(id)!
-      .savedApplications.push({ referenceNumber, dateOfBirth, name })
+      .savedApplications.push({ referenceNumber, addedAt, dateOfBirth, name })
   }
 }
 
@@ -576,6 +579,7 @@ bot.on('callback_query', async (query) => {
   }
 })
 
+const rateLimitInterval = 1000 * 60
 async function fetchApplicationStatus({
   name,
   telegramUserId,
@@ -592,7 +596,6 @@ async function fetchApplicationStatus({
 
   const rateLimitForUser = rateLimit.get(telegramUserId)
   if (rateLimitForUser) {
-    const rateLimitInterval = 1000 * 60
     const rateLimitLeft = Date.now() - rateLimitForUser
     if (rateLimitLeft < rateLimitInterval) {
       text =
@@ -641,6 +644,7 @@ async function fetchApplicationStatus({
           userDb.get(telegramUserId)!.savedApplications.push({
             referenceNumber,
             dateOfBirth: dateOfBirth.getTime(),
+            addedAt: Date.now(),
             name: name,
           })
           saveDb()
@@ -679,6 +683,98 @@ async function fetchApplicationStatus({
     })
   }
   userStates.delete(telegramUserId)
+}
+
+async function scheduledFetchAllApplications() {
+  const entries = Array.from(userDb.entries())
+  const applications = []
+  for (const [telegramUserId, user] of entries) {
+    for (const application of user.savedApplications) {
+      applications.push({
+        name: application.name,
+        telegramUserId,
+        referenceNumber: application.referenceNumber,
+        dateOfBirth: new Date(application.dateOfBirth),
+        addedAt: application.addedAt,
+      })
+    }
+  }
+  for (let i = 0; i < applications.length; i++) {
+    const application = applications[i]
+    const { referenceNumber, addedAt, dateOfBirth, name, telegramUserId } =
+      application
+
+    const rateLimitForUser = rateLimit.get(telegramUserId)
+    if (rateLimitForUser) {
+      if (Date.now() - rateLimitForUser < rateLimitInterval) {
+        continue
+      }
+    }
+
+    const cached = cache.get(referenceNumber)
+    if (cached) {
+      if (Date.now() - cached.updatedAt < 1000 * 60 * 60) {
+        continue
+      }
+    }
+
+    if (Date.now() - addedAt > 1000 * 60 * 60 * 24 * 60) {
+      await bot.sendMessage(
+        telegramUserId,
+        `Ваша заявка ${name} (${referenceNumber}) была создана более 60 дней назад, поэтому она была автоматически удалена из отслеживания. Если вы хотите продолжить отслеживание, добавьте ее заново`,
+      )
+    }
+
+    const userState = userStates.get(telegramUserId)
+    if (userState && userState.state === 'loading') {
+      continue
+    }
+
+    userStates.set(telegramUserId, {
+      state: 'loading',
+      editMessageId: null,
+    })
+
+    rateLimit.set(application.telegramUserId, Date.now())
+    try {
+      const status = await getApplicationStatus(referenceNumber, dateOfBirth)
+      if (status.ok) {
+        try {
+          await bot.sendMessage(
+            telegramUserId,
+            `Статус заявки ${name} (${referenceNumber}): ` + status.status,
+            {
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: 'Отписаться от этой заявки',
+                      callback_data: 'delete_' + application.referenceNumber,
+                    },
+                  ],
+                ],
+              },
+            },
+          )
+          cache.set(referenceNumber, {
+            updatedAt: Date.now(),
+            status: status.status,
+          })
+        } catch {
+          userDb.delete(telegramUserId)
+        }
+      } else {
+        userStates.delete(telegramUserId)
+        continue
+      }
+    } catch (e) {
+      console.error(e)
+      userStates.delete(telegramUserId)
+      continue
+    }
+
+    userStates.delete(telegramUserId)
+  }
 }
 
 console.log('Bot is running')
