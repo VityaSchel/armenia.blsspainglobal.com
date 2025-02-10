@@ -305,6 +305,7 @@ bot.on('message', async (msg) => {
             referenceNumber: userState.referenceNumber,
             dateOfBirth: birthdayDate,
           })
+          await goToScene(msg, scenes.inputApplicationName, true)
         } else {
           await goToScene(msg, scenes.incorrectDateOfBirth, true)
         }
