@@ -2,6 +2,8 @@ import TelegramBot from 'node-telegram-bot-api'
 import { getApplicationStatus } from './status'
 import path from 'path'
 import fs from 'fs/promises'
+import { formatDistanceStrict } from 'date-fns'
+import { ru } from 'date-fns/locale'
 
 const TELEGRAM_BOT_TRACKING_API_KEY = process.env.TELEGRAM_BOT_TRACKING_API_KEY
 if (!TELEGRAM_BOT_TRACKING_API_KEY) {
@@ -564,11 +566,11 @@ async function fetchApplicationStatus({
         referenceNumber +
         ': ' +
         cached.status +
-        '\n\n(обновлено в ' +
-        Intl.DateTimeFormat('ru-RU', {
-          hour: 'numeric',
-          minute: 'numeric',
-        }).format(new Date(cached.updatedAt)) +
+        '\n\n(обновлено ' +
+        formatDistanceStrict(cached.updatedAt, new Date(), {
+          locale: ru,
+          addSuffix: true,
+        }) +
         ')'
       cacheMiss = false
     }
