@@ -4,7 +4,8 @@
   "type": "module",
   "author": "Viktor Shchelochkov <hi@hloth.dev> (https://hloth.dev)",
   "scripts": {
-    "telegram-notifications-bot": "bun src/bot-callback.ts"
+    "telegram-notifications-bot": "bun src/bot-callback.ts",
+    "telegram-tracking-bot": "bun src/bot-tracker.ts"
   },
   "devDependencies": {
     "@eslint/compat": "1.2.5",

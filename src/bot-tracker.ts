@@ -91,6 +91,7 @@ async function saveDb() {
 type Scene =
   | 'mainMenu'
   | 'about'
+  | 'tooManyApplications'
   | 'inputReferenceNumber'
   | 'incorrectReferenceNumber'
   | 'inputDateOfBirth'
@@ -129,8 +130,21 @@ const scenes: Record<Scene, SceneConfig> = {
       ],
     },
   },
+  tooManyApplications: {
+    text: 'У вас уже слишком много добавленных заявок. Сначала удалите старые, прежде чем добавлять новые',
+    replyMarkup: {
+      inline_keyboard: [
+        [
+          {
+            text: 'Назад',
+            callback_data: 'main',
+          },
+        ],
+      ],
+    },
+  },
   about: {
-    text: 'О боте',
+    text: 'О боте:\n\nБота сделал @hlothdev\nОн просуществует до тех пор, пока мне не одобрят визу или не надоест.\nКапчи решают сотни живых людей в реальном времени на сервисе ruCaptcha за деньги из кармана автора бота.\nИсходный код: https://github.com/VityaSchel/armenia.blsspainglobal.com',
     replyMarkup: {
       inline_keyboard: [
         [
@@ -436,10 +450,16 @@ bot.on('callback_query', async (query) => {
       userStates.delete(query.from.id)
       await goToMainMenu(query.message, false, query.from.id)
       break
-    case 'add_tracking':
-      userStates.set(query.from.id, { state: 'input_reference_number' })
-      await goToScene(query.message, scenes.inputReferenceNumber)
+    case 'add_tracking': {
+      const savedApplication = getSavedApplications(query.from.id)
+      if (savedApplication.length >= 5) {
+        await goToScene(query.message, scenes.tooManyApplications)
+      } else {
+        userStates.set(query.from.id, { state: 'input_reference_number' })
+        await goToScene(query.message, scenes.inputReferenceNumber)
+      }
       break
+    }
     case 'about':
       userStates.delete(query.from.id)
       await goToScene(query.message, scenes.about)
