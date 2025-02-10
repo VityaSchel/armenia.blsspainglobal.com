@@ -457,7 +457,9 @@ bot.on('callback_query', async (query) => {
         query.data.startsWith('status_') ||
         query.data.startsWith('delete_')
       ) {
-        const referenceNumber = query.data.substring('status_'.length)
+        const referenceNumber = query.data.substring(
+          query.data.indexOf('_') + 1,
+        )
         if (!referenceNumberRegex.test(referenceNumber)) {
           break
         }
