@@ -176,22 +176,32 @@ async function submitCaptcha({
   }
 }
 
-export async function solveCaptcha() {
-  console.log('[1/5] Generating captcha token...')
+export async function solveCaptcha(debug = false) {
+  if (debug) {
+    console.log('[1/5] Generating captcha token...')
+  }
   const dataArg = await getCaptchaGenToken()
-  console.log('[2/5] Fetching captcha page...')
+  if (debug) {
+    console.log('[2/5] Fetching captcha page...')
+  }
   const { captchaHtml, cookies } = await getCaptcha(dataArg)
-  console.log('[3/5] Parsing captcha page...')
+  if (debug) {
+    console.log('[3/5] Parsing captcha page...')
+  }
   const { taskText, panels, captchaId, requestVerificationToken } =
     await parseCaptchaHTML(captchaHtml)
-  console.log('[4/5] Solving captcha...')
+  if (debug) {
+    console.log('[4/5] Solving captcha...')
+  }
   let attempt = 0
   do {
     const { selection, rucaptchaTaskId } = await getCaptchaSolution({
       task: taskText,
       panels,
     })
-    console.log('[5/5] Submitting captcha solution... Attempt', ++attempt)
+    if (debug) {
+      console.log('[5/5] Submitting captcha solution... Attempt', ++attempt)
+    }
     const successCaptchaId = await submitCaptcha({
       selectedPanelsIds: selection,
       captchaId,

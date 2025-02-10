@@ -788,4 +788,22 @@ async function scheduledFetchAllApplications() {
   }
 }
 
+const nextScheduledFetchAllApplications: Date = new Date()
+nextScheduledFetchAllApplications.setHours(0, 0, 0, 0)
+nextScheduledFetchAllApplications.setDate(
+  nextScheduledFetchAllApplications.getDate() + 1,
+)
+setInterval(() => {
+  if (Date.now() >= nextScheduledFetchAllApplications.getTime()) {
+    console.log(
+      'Running scheduled fetch all applications...',
+      new Date().toISOString(),
+    )
+    nextScheduledFetchAllApplications.setDate(
+      nextScheduledFetchAllApplications.getDate() + 1,
+    )
+    scheduledFetchAllApplications()
+  }
+}, 1000 * 60)
+
 console.log('Bot is running')

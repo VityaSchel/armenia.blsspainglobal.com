@@ -89,10 +89,11 @@ const errors: { [key: string]: string } = {
 export async function getApplicationStatus(
   referenceNumber: string,
   dateOfBirth: Date,
+  debug = false,
 ): Promise<{ ok: true; status: string } | { ok: false; error: string }> {
   let captchaId: string
   try {
-    captchaId = await solveCaptcha()
+    captchaId = await solveCaptcha(debug)
   } catch (e) {
     console.error(e)
     return {
@@ -101,7 +102,9 @@ export async function getApplicationStatus(
         'Не удалось решить капчу или сайт BLS перегружен. Попробуйте отправить запрос еще раз позднее.',
     }
   }
-  console.log('Fetching application status...')
+  if (debug) {
+    console.log('Fetching application status...')
+  }
   let applicationPageHTML: string
   try {
     applicationPageHTML = await getApplicationPageHTML({
