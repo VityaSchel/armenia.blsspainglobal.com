@@ -329,14 +329,16 @@ bot.on('message', async (msg) => {
           editMessageId: messageId,
         })
         fetchApplicationStatus({
-          name: msg.text,
+          name: msg.text.replaceAll('\n', ' '),
           telegramUserId: msg.from.id,
           referenceNumber: userState.referenceNumber,
           dateOfBirth: userState.dateOfBirth,
         })
+        console.log(userState.dateOfBirth)
       } else {
         await goToScene(msg, scenes.incorrectApplicationName, true)
       }
+      return
     } else if (userState.state === 'loading') {
       userStates.set(msg.from.id, {
         state: 'loading',
