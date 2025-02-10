@@ -32,6 +32,8 @@ type SceneConfig = {
   replyMarkup?: TelegramBot.InlineKeyboardMarkup
 }
 
+const cache = new Map<string, { updatedAt: number; status: string }>()
+
 const scenes: Record<Scene, SceneConfig> = {
   mainMenu: {
     text: 'Меню бота',
@@ -282,14 +284,45 @@ async function fetchApplicationStatus({
   referenceNumber: string
   dateOfBirth: Date
 }) {
-  let text: string
-  try {
-    const status = await getApplicationStatus(referenceNumber, dateOfBirth)
-    text = 'Статус заявки ' + referenceNumber + ': ' + status
-  } catch (e) {
-    console.error(e)
-    text = 'Не удалось получить статус заявки ' + referenceNumber
+  let text: string = ''
+
+  let cacheFound = false
+  const cached = cache.get(referenceNumber)
+  if (cached) {
+    if (Date.now() - cached.updatedAt < 1000 * 60 * 60) {
+      text =
+        'Статус заявки ' +
+        referenceNumber +
+        ': ' +
+        cached.status +
+        '\n (обновлено в ' +
+        Intl.DateTimeFormat('ru-RU', {
+          hour: 'numeric',
+          minute: 'numeric',
+        }).format(new Date(cached.updatedAt)) +
+        ')'
+      cacheFound = true
+    }
   }
+
+  if (!cacheFound) {
+    try {
+      const status = await getApplicationStatus(referenceNumber, dateOfBirth)
+      if (status.ok) {
+        text = 'Статус заявки ' + referenceNumber + ': ' + status.status
+        cache.set(referenceNumber, {
+          updatedAt: Date.now(),
+          status: status.status,
+        })
+      } else {
+        text = status.error
+      }
+    } catch (e) {
+      console.error(e)
+      text = 'Не удалось получить статус заявки ' + referenceNumber
+    }
+  }
+
   const userState = userStates.get(telegramUserId)
   if (!userState || userState.state !== 'loading') return
   if (userState.editMessageId) {
@@ -300,6 +333,7 @@ async function fetchApplicationStatus({
   } else {
     await bot.sendMessage(telegramUserId, text)
   }
+  userStates.delete(telegramUserId)
 }
 
 console.log('Bot is running')

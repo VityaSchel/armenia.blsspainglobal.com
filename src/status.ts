@@ -89,13 +89,17 @@ const errors: { [key: string]: string } = {
 export async function getApplicationStatus(
   referenceNumber: string,
   dateOfBirth: Date,
-) {
+): Promise<{ ok: true; status: string } | { ok: false; error: string }> {
   let captchaId: string
   try {
     captchaId = await solveCaptcha()
   } catch (e) {
     console.error(e)
-    return 'Не удалось решить капчу или сайт BLS перегружен. Попробуйте отправить запрос еще раз позднее.'
+    return {
+      ok: false,
+      error:
+        'Не удалось решить капчу или сайт BLS перегружен. Попробуйте отправить запрос еще раз позднее.',
+    }
   }
   console.log('Fetching application status...')
   let applicationPageHTML: string
@@ -107,7 +111,11 @@ export async function getApplicationStatus(
     })
   } catch (e) {
     console.error(e)
-    return 'Не удалось получить статус заявления. Попробуйте отправить запрос еще раз позднее.'
+    return {
+      ok: false,
+      error:
+        'Не удалось получить статус заявления. Попробуйте отправить запрос еще раз позднее.',
+    }
   }
   const result = parseApplicationPageHTML(applicationPageHTML)
   const removableCharacters = /^[a-z]/g
@@ -119,9 +127,9 @@ export async function getApplicationStatus(
       )
     })
     if (statusTranslated) {
-      return statusTranslated[1]
+      return { ok: true, status: statusTranslated[1] }
     } else {
-      return result.status
+      return { ok: true, status: result.status }
     }
   } else {
     const errorTranslated = Object.entries(errors).find(([key]) => {
@@ -131,9 +139,9 @@ export async function getApplicationStatus(
       )
     })
     if (errorTranslated) {
-      return 'Ошибка: ' + errorTranslated[1]
+      return { ok: false, error: 'Ошибка: ' + errorTranslated[1] }
     } else {
-      return 'Неизвестная ошибка: ' + result.status
+      return { ok: false, error: 'Неизвестная ошибка: ' + result.status }
     }
   }
 }
