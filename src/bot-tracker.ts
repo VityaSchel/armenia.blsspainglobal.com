@@ -789,7 +789,7 @@ async function scheduledFetchAllApplications() {
 }
 
 const nextScheduledFetchAllApplications: Date = new Date()
-nextScheduledFetchAllApplications.setHours(0, 0, 0, 0)
+nextScheduledFetchAllApplications.setHours(12, 0, 0, 0)
 nextScheduledFetchAllApplications.setDate(
   nextScheduledFetchAllApplications.getDate() + 1,
 )
