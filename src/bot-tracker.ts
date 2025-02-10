@@ -81,6 +81,8 @@ async function saveDb() {
         '\t' +
         application.referenceNumber +
         '\t' +
+        application.addedAt +
+        '\t' +
         application.dateOfBirth +
         '\t' +
         application.name +
