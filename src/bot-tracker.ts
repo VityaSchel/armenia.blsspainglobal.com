@@ -67,7 +67,7 @@ async function parseDb() {
   }
 }
 
-parseDb()
+await parseDb()
 
 let saveFileLock = false
 async function saveDb() {
@@ -723,6 +723,15 @@ async function scheduledFetchAllApplications() {
         telegramUserId,
         `Ваша заявка ${name} (${referenceNumber}) была создана более 60 дней назад, поэтому она была автоматически удалена из отслеживания. Если вы хотите продолжить отслеживание, добавьте ее заново`,
       )
+      userDb.set(telegramUserId, {
+        ...userDb.get(telegramUserId)!,
+        savedApplications: userDb
+          .get(telegramUserId)!
+          .savedApplications.filter(
+            (a) => a.referenceNumber !== referenceNumber,
+          ),
+      })
+      continue
     }
 
     const userState = userStates.get(telegramUserId)
