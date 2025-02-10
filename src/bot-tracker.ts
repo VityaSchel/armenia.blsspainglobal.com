@@ -348,25 +348,26 @@ bot.on('message', async (msg) => {
     }
   }
 
-  goToMainMenu(msg)
+  goToMainMenu(msg, true)
 })
 
-async function goToMainMenu(message: TelegramBot.Message) {
+async function goToMainMenu(
+  message: TelegramBot.Message,
+  forceNewMessage: boolean,
+) {
   if (!message.from) return
   const savedApplications = getSavedApplications(message.from.id)
-  bot.sendMessage(message.chat.id, scenes.mainMenu.text, {
-    reply_markup: {
-      inline_keyboard: [
-        ...savedApplications.map((a) => [
-          {
-            text: a.name + ' (' + a.referenceNumber + ')',
-            callback_data: 'application_' + a.referenceNumber,
-          },
-        ]),
-        ...(scenes.mainMenu.replyMarkup?.inline_keyboard ?? []),
-      ],
-    },
-  })
+  goToScene(
+    message,
+    scenes.mainMenu,
+    forceNewMessage,
+    savedApplications.map((a) => [
+      {
+        text: a.name + ' (' + a.referenceNumber + ')',
+        callback_data: 'application_' + a.referenceNumber,
+      },
+    ]),
+  )
 }
 
 function getSavedApplications(telegramUserId: number) {
@@ -382,8 +383,8 @@ async function goToScene(
   if (!replyTo.from) return null
   const replyMarkup: TelegramBot.InlineKeyboardMarkup = {
     inline_keyboard: [
-      ...(scene.replyMarkup?.inline_keyboard ?? []),
       ...(additionalButtons ? additionalButtons : []),
+      ...(scene.replyMarkup?.inline_keyboard ?? []),
     ],
   }
   if (forceNewMessage) {
@@ -428,7 +429,7 @@ bot.on('callback_query', async (query) => {
   switch (query.data) {
     case 'main':
       userStates.delete(query.from.id)
-      await goToMainMenu(query.message)
+      await goToMainMenu(query.message, false)
       break
     case 'add_tracking':
       userStates.set(query.from.id, { state: 'input_reference_number' })
