@@ -497,7 +497,7 @@ bot.on('callback_query', async (query) => {
           const messageId = await goToScene(
             query.message,
             scenes.fetchingApplicationStatus,
-            true,
+            false,
           )
           userStates.set(query.from.id, {
             state: 'loading',
