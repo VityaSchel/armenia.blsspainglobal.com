@@ -175,3 +175,5 @@ dist
 .DS_Store
 
 captcha.png
+
+db.txt
