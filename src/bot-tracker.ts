@@ -348,8 +348,13 @@ bot.on('message', async (msg) => {
     }
   }
 
-  const savedApplications = getSavedApplications(msg.from.id)
-  bot.sendMessage(msg.chat.id, scenes.mainMenu.text, {
+  goToMainMenu(msg)
+})
+
+async function goToMainMenu(message: TelegramBot.Message) {
+  if (!message.from) return
+  const savedApplications = getSavedApplications(message.from.id)
+  bot.sendMessage(message.chat.id, scenes.mainMenu.text, {
     reply_markup: {
       inline_keyboard: [
         ...savedApplications.map((a) => [
@@ -362,7 +367,7 @@ bot.on('message', async (msg) => {
       ],
     },
   })
-})
+}
 
 function getSavedApplications(telegramUserId: number) {
   return userDb.get(telegramUserId)?.savedApplications ?? []
@@ -423,7 +428,7 @@ bot.on('callback_query', async (query) => {
   switch (query.data) {
     case 'main':
       userStates.delete(query.from.id)
-      await goToScene(query.message, scenes.mainMenu)
+      await goToMainMenu(query.message)
       break
     case 'add_tracking':
       userStates.set(query.from.id, { state: 'input_reference_number' })
