@@ -29,7 +29,7 @@ const userDb = new Map<
   {
     savedApplications: {
       referenceNumber: string
-      dateOfBirth: Date
+      dateOfBirth: number
       name: string
     }[]
   }
@@ -50,7 +50,7 @@ async function parseDb() {
     const del3 = line.indexOf('\t', del2 + 1)
     const id = Number(line.substring(0, del1))
     const referenceNumber = line.substring(del1 + 1, del2)
-    const dateOfBirth = new Date(line.substring(del2 + 1, del3))
+    const dateOfBirth = Number(line.substring(del2 + 1, del3))
     const name = line.substring(del3 + 1)
     if (!userDb.has(id)) {
       userDb.set(id, { savedApplications: [] })
@@ -75,7 +75,7 @@ async function saveDb() {
         '\t' +
         application.referenceNumber +
         '\t' +
-        application.dateOfBirth.toISOString() +
+        application.dateOfBirth +
         '\t' +
         application.name +
         '\n'
@@ -334,7 +334,6 @@ bot.on('message', async (msg) => {
           referenceNumber: userState.referenceNumber,
           dateOfBirth: userState.dateOfBirth,
         })
-        console.log(userState.dateOfBirth)
       } else {
         await goToScene(msg, scenes.incorrectApplicationName, true)
       }
@@ -496,7 +495,7 @@ bot.on('callback_query', async (query) => {
             name: savedApplication.name,
             telegramUserId: query.from.id,
             referenceNumber: savedApplication.referenceNumber,
-            dateOfBirth: savedApplication.dateOfBirth,
+            dateOfBirth: new Date(savedApplication.dateOfBirth),
           })
         } else if (query.data.startsWith('delete_')) {
           if (!userDb.has(query.from.id)) {
@@ -582,7 +581,7 @@ async function fetchApplicationStatus({
           }
           userDb.get(telegramUserId)!.savedApplications.push({
             referenceNumber,
-            dateOfBirth,
+            dateOfBirth: dateOfBirth.getTime(),
             name: name,
           })
           saveDb()
