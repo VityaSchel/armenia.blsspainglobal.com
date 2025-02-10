@@ -354,10 +354,13 @@ bot.on('message', async (msg) => {
 async function goToMainMenu(
   message: TelegramBot.Message,
   forceNewMessage: boolean,
+  telegramUserId?: number,
 ) {
   if (!message.from) return
-  const savedApplications = getSavedApplications(message.from.id)
-  goToScene(
+  const savedApplications = getSavedApplications(
+    telegramUserId ?? message.from.id,
+  )
+  await goToScene(
     message,
     scenes.mainMenu,
     forceNewMessage,
@@ -429,7 +432,7 @@ bot.on('callback_query', async (query) => {
   switch (query.data) {
     case 'main':
       userStates.delete(query.from.id)
-      await goToMainMenu(query.message, false)
+      await goToMainMenu(query.message, false, query.from.id)
       break
     case 'add_tracking':
       userStates.set(query.from.id, { state: 'input_reference_number' })
