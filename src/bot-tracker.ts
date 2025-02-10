@@ -32,6 +32,7 @@ type SceneConfig = {
   replyMarkup?: TelegramBot.InlineKeyboardMarkup
 }
 
+const rateLimit = new Map<number, number>()
 const cache = new Map<string, { updatedAt: number; status: string }>()
 
 const scenes: Record<Scene, SceneConfig> = {
@@ -285,8 +286,21 @@ async function fetchApplicationStatus({
   dateOfBirth: Date
 }) {
   let text: string = ''
+  let cacheMiss = true
 
-  let cacheFound = false
+  const rateLimitForUser = rateLimit.get(telegramUserId)
+  if (rateLimitForUser) {
+    const rateLimitInterval = 1000 * 60
+    const rateLimitLeft = Date.now() - rateLimitForUser
+    if (rateLimitLeft < rateLimitInterval) {
+      text =
+        'Пожалуйста, подождите ' +
+        Math.round(rateLimitInterval - rateLimitLeft) +
+        ' секунд перед следующим запросом'
+      cacheMiss = false
+    }
+  }
+
   const cached = cache.get(referenceNumber)
   if (cached) {
     if (Date.now() - cached.updatedAt < 1000 * 60 * 60) {
@@ -295,17 +309,17 @@ async function fetchApplicationStatus({
         referenceNumber +
         ': ' +
         cached.status +
-        '\n (обновлено в ' +
+        '\n\n(обновлено в ' +
         Intl.DateTimeFormat('ru-RU', {
           hour: 'numeric',
           minute: 'numeric',
         }).format(new Date(cached.updatedAt)) +
         ')'
-      cacheFound = true
+      cacheMiss = false
     }
   }
 
-  if (!cacheFound) {
+  if (cacheMiss) {
     try {
       const status = await getApplicationStatus(referenceNumber, dateOfBirth)
       if (status.ok) {
@@ -321,6 +335,7 @@ async function fetchApplicationStatus({
       console.error(e)
       text = 'Не удалось получить статус заявки ' + referenceNumber
     }
+    rateLimit.set(telegramUserId, Date.now())
   }
 
   const userState = userStates.get(telegramUserId)
