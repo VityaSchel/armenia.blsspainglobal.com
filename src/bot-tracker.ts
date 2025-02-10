@@ -45,6 +45,7 @@ async function parseDb() {
   const lines = dbFile.split('\n')
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
+    if (!line.trim()) continue
     const del1 = line.indexOf('\t')
     const del2 = line.indexOf('\t', del1 + 1)
     const del3 = line.indexOf('\t', del2 + 1)
