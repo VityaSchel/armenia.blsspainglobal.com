@@ -162,7 +162,7 @@ const scenes: Record<Scene, SceneConfig> = {
     },
   },
   inputReferenceNumber: {
-    text: 'Введите номер для отслеживания',
+    text: 'Введите номер для отслеживания в формате EVN12345678',
     replyMarkup: {
       inline_keyboard: [
         [
@@ -175,7 +175,7 @@ const scenes: Record<Scene, SceneConfig> = {
     },
   },
   incorrectReferenceNumber: {
-    text: 'Некорректный формат номера для отслеживания. Попробуйте еще раз',
+    text: 'Некорректный формат номера для отслеживания. Введите номер для отслеживания в формате EVN12345678. Попробуйте еще раз',
     replyMarkup: {
       inline_keyboard: [
         [
