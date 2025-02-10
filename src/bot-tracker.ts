@@ -290,12 +290,37 @@ bot.on('message', async (msg) => {
   if (userState) {
     if (userState.state === 'input_reference_number') {
       if (msg.text) {
-        if (referenceNumberRegex.test(msg.text) && msg.text.length < 30) {
-          userStates.set(msg.from.id, {
-            state: 'input_date_of_birth',
-            referenceNumber: msg.text,
-          })
-          await goToScene(msg, scenes.inputDateOfBirth, true)
+        const referenceNumber = msg.text
+        if (
+          referenceNumberRegex.test(referenceNumber) &&
+          referenceNumber.length < 30
+        ) {
+          const savedApplications = getSavedApplications(msg.from.id)
+          if (
+            savedApplications.some((a) => a.referenceNumber === referenceNumber)
+          ) {
+            await goToScene(msg, scenes.applicationMenu, false, [
+              [
+                {
+                  text: 'Проверить статус заявки',
+                  callback_data: 'status_' + referenceNumber,
+                },
+              ],
+              [
+                {
+                  text: 'Удалить',
+                  callback_data: 'delete_' + referenceNumber,
+                },
+              ],
+            ])
+            return
+          } else {
+            userStates.set(msg.from.id, {
+              state: 'input_date_of_birth',
+              referenceNumber: msg.text,
+            })
+            await goToScene(msg, scenes.inputDateOfBirth, true)
+          }
         } else {
           await goToScene(msg, scenes.incorrectReferenceNumber, true)
         }
