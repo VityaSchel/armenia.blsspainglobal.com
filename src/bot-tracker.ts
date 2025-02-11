@@ -575,7 +575,7 @@ bot.on('callback_query', async (query) => {
               ),
             })
             saveDb()
-            await goToScene(query.message, scenes.mainMenu)
+            await goToMainMenu(query.message, false, query.from.id)
           }
         }
       }
