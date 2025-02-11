@@ -790,9 +790,34 @@ async function scheduledFetchAllApplications() {
     const { referenceNumber, addedAt, dateOfBirth, name, telegramUserId } =
       application
 
+    const sendResult = async (text: string) => {
+      try {
+        await bot.sendMessage(
+          telegramUserId,
+          `Статус заявки ${name} (${referenceNumber}): ` + text,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: 'Отписаться от этой заявки',
+                    callback_data: 'delete_' + application.referenceNumber,
+                  },
+                ],
+              ],
+            },
+          },
+        )
+      } catch (e) {
+        console.error('Ошибка во время отправки сообщения', e)
+        userDb.delete(telegramUserId)
+      }
+    }
+
     const cached = cache.get(referenceNumber)
     if (cached) {
       if (Date.now() - cached.updatedAt < 1000 * 60 * 60) {
+        await sendResult(cached.status)
         continue
       }
     }
@@ -826,32 +851,12 @@ async function scheduledFetchAllApplications() {
     try {
       const status = await getApplicationStatus(referenceNumber, dateOfBirth)
       if (status.ok) {
-        try {
-          await bot.sendMessage(
-            telegramUserId,
-            `Статус заявки ${name} (${referenceNumber}): ` + status.status,
-            {
-              reply_markup: {
-                inline_keyboard: [
-                  [
-                    {
-                      text: 'Отписаться от этой заявки',
-                      callback_data: 'delete_' + application.referenceNumber,
-                    },
-                  ],
-                ],
-              },
-            },
-          )
-          cache.set(referenceNumber, {
-            updatedAt: Date.now(),
-            status: status.status,
-            dateOfBirth: dateOfBirth.getTime(),
-          })
-        } catch (e) {
-          console.error('Ошибка во время отправки сообщения', e)
-          userDb.delete(telegramUserId)
-        }
+        cache.set(referenceNumber, {
+          updatedAt: Date.now(),
+          status: status.status,
+          dateOfBirth: dateOfBirth.getTime(),
+        })
+        await sendResult(status.status)
       } else {
         console.error(
           'Ошибка во время получения статуса',
