@@ -113,7 +113,10 @@ type SceneConfig = {
 }
 
 const rateLimit = new Map<number, number>()
-const cache = new Map<string, { updatedAt: number; status: string }>()
+const cache = new Map<
+  string,
+  { dateOfBirth: number; updatedAt: number; status: string }
+>()
 
 const scenes: Record<Scene, SceneConfig> = {
   mainMenu: {
@@ -608,21 +611,26 @@ async function fetchApplicationStatus({
     }
   }
 
+  let saveToApplications = false
+
   const cached = cache.get(referenceNumber)
   if (cached) {
     if (Date.now() - cached.updatedAt < 1000 * 60 * 60) {
-      text =
-        'Статус заявки ' +
-        referenceNumber +
-        ': ' +
-        cached.status +
-        '\n\n(обновлено ' +
-        formatDistanceStrict(cached.updatedAt, new Date(), {
-          locale: ru,
-          addSuffix: true,
-        }) +
-        ')'
-      cacheMiss = false
+      if (cached.dateOfBirth === dateOfBirth.getTime()) {
+        text =
+          'Статус заявки ' +
+          referenceNumber +
+          ': ' +
+          cached.status +
+          '\n\n(обновлено ' +
+          formatDistanceStrict(cached.updatedAt, new Date(), {
+            locale: ru,
+            addSuffix: true,
+          }) +
+          ')'
+        cacheMiss = false
+        saveToApplications = true
+      }
     }
   }
 
@@ -634,23 +642,9 @@ async function fetchApplicationStatus({
         cache.set(referenceNumber, {
           updatedAt: Date.now(),
           status: status.status,
+          dateOfBirth: dateOfBirth.getTime(),
         })
-        const savedApplications = userDb.get(telegramUserId)?.savedApplications
-        if (
-          !savedApplications ||
-          !savedApplications.some((a) => a.referenceNumber === referenceNumber)
-        ) {
-          if (!userDb.has(telegramUserId)) {
-            userDb.set(telegramUserId, { savedApplications: [] })
-          }
-          userDb.get(telegramUserId)!.savedApplications.push({
-            referenceNumber,
-            dateOfBirth: dateOfBirth.getTime(),
-            addedAt: Date.now(),
-            name: name,
-          })
-          saveDb()
-        }
+        saveToApplications = true
       } else {
         text = status.error
       }
@@ -659,6 +653,25 @@ async function fetchApplicationStatus({
       text = 'Не удалось получить статус заявки ' + referenceNumber
     }
     rateLimit.set(telegramUserId, Date.now())
+  }
+
+  if (saveToApplications) {
+    const savedApplications = userDb.get(telegramUserId)?.savedApplications
+    if (
+      !savedApplications ||
+      !savedApplications.some((a) => a.referenceNumber === referenceNumber)
+    ) {
+      if (!userDb.has(telegramUserId)) {
+        userDb.set(telegramUserId, { savedApplications: [] })
+      }
+      userDb.get(telegramUserId)!.savedApplications.push({
+        referenceNumber,
+        dateOfBirth: dateOfBirth.getTime(),
+        addedAt: Date.now(),
+        name: name,
+      })
+      saveDb()
+    }
   }
 
   const userState = userStates.get(telegramUserId)
@@ -706,13 +719,6 @@ async function scheduledFetchAllApplications() {
     const { referenceNumber, addedAt, dateOfBirth, name, telegramUserId } =
       application
 
-    const rateLimitForUser = rateLimit.get(telegramUserId)
-    if (rateLimitForUser) {
-      if (Date.now() - rateLimitForUser < rateLimitInterval) {
-        continue
-      }
-    }
-
     const cached = cache.get(referenceNumber)
     if (cached) {
       if (Date.now() - cached.updatedAt < 1000 * 60 * 60) {
@@ -723,7 +729,7 @@ async function scheduledFetchAllApplications() {
     if (Date.now() - addedAt > 1000 * 60 * 60 * 24 * 60) {
       await bot.sendMessage(
         telegramUserId,
-        `Ваша заявка ${name} (${referenceNumber}) была создана более 60 дней назад, поэтому она была автоматически удалена из отслеживания. Если вы хотите продолжить отслеживание, добавьте ее заново`,
+        `Ваша заявка ${name} (${referenceNumber}) была добавлена более 60 дней назад, поэтому она была автоматически удалена из отслеживания. Если вы хотите продолжить отслеживание, добавьте ее заново`,
       )
       userDb.set(telegramUserId, {
         ...userDb.get(telegramUserId)!,
@@ -746,7 +752,6 @@ async function scheduledFetchAllApplications() {
       editMessageId: null,
     })
 
-    rateLimit.set(application.telegramUserId, Date.now())
     try {
       const status = await getApplicationStatus(referenceNumber, dateOfBirth)
       if (status.ok) {
@@ -770,11 +775,18 @@ async function scheduledFetchAllApplications() {
           cache.set(referenceNumber, {
             updatedAt: Date.now(),
             status: status.status,
+            dateOfBirth: dateOfBirth.getTime(),
           })
-        } catch {
+        } catch (e) {
+          console.error('Ошибка во время отправки сообщения', e)
           userDb.delete(telegramUserId)
         }
       } else {
+        console.error(
+          'Ошибка во время получения статуса',
+          status.error,
+          new Date().toISOString(),
+        )
         userStates.delete(telegramUserId)
         continue
       }
