@@ -307,33 +307,50 @@ bot.on('message', async (msg) => {
           if (
             savedApplications.some((a) => a.referenceNumber === referenceNumber)
           ) {
-            await goToScene(msg, scenes.applicationMenu, false, [
-              [
-                {
-                  text: 'Проверить статус заявки',
-                  callback_data: 'status_' + referenceNumber,
-                },
+            await goToScene({
+              replyTo: msg,
+              scene: scenes.applicationMenu,
+              forceNewMessage: false,
+              additionalButtons: [
+                [
+                  {
+                    text: 'Проверить статус заявки',
+                    callback_data: 'status_' + referenceNumber,
+                  },
+                ],
+                [
+                  {
+                    text: 'Удалить',
+                    callback_data: 'delete_' + referenceNumber,
+                  },
+                ],
               ],
-              [
-                {
-                  text: 'Удалить',
-                  callback_data: 'delete_' + referenceNumber,
-                },
-              ],
-            ])
+            })
             return
           } else {
             userStates.set(msg.from.id, {
               state: 'input_date_of_birth',
               referenceNumber: msg.text,
             })
-            await goToScene(msg, scenes.inputDateOfBirth, true)
+            await goToScene({
+              replyTo: msg,
+              scene: scenes.inputDateOfBirth,
+              forceNewMessage: true,
+            })
           }
         } else {
-          await goToScene(msg, scenes.incorrectReferenceNumber, true)
+          await goToScene({
+            replyTo: msg,
+            scene: scenes.incorrectReferenceNumber,
+            forceNewMessage: true,
+          })
         }
       } else {
-        await goToScene(msg, scenes.incorrectReferenceNumber, true)
+        await goToScene({
+          replyTo: msg,
+          scene: scenes.incorrectReferenceNumber,
+          forceNewMessage: true,
+        })
       }
       return
     } else if (userState.state === 'input_date_of_birth') {
@@ -355,12 +372,24 @@ bot.on('message', async (msg) => {
             referenceNumber: userState.referenceNumber,
             dateOfBirth: birthdayDate,
           })
-          await goToScene(msg, scenes.inputApplicationName, true)
+          await goToScene({
+            replyTo: msg,
+            scene: scenes.inputApplicationName,
+            forceNewMessage: true,
+          })
         } else {
-          await goToScene(msg, scenes.incorrectDateOfBirth, true)
+          await goToScene({
+            replyTo: msg,
+            scene: scenes.incorrectDateOfBirth,
+            forceNewMessage: true,
+          })
         }
       } else {
-        await goToScene(msg, scenes.incorrectDateOfBirth, true)
+        await goToScene({
+          replyTo: msg,
+          scene: scenes.incorrectDateOfBirth,
+          forceNewMessage: true,
+        })
       }
       return
     } else if (userState.state === 'input_application_name') {
@@ -369,11 +398,11 @@ bot.on('message', async (msg) => {
           state: 'loading',
           editMessageId: null,
         })
-        const messageId = await goToScene(
-          msg,
-          scenes.fetchingApplicationStatus,
-          true,
-        )
+        const messageId = await goToScene({
+          replyTo: msg,
+          scene: scenes.fetchingApplicationStatus,
+          forceNewMessage: true,
+        })
         userStates.set(msg.from.id, {
           state: 'loading',
           editMessageId: messageId,
@@ -385,7 +414,11 @@ bot.on('message', async (msg) => {
           dateOfBirth: userState.dateOfBirth,
         })
       } else {
-        await goToScene(msg, scenes.incorrectApplicationName, true)
+        await goToScene({
+          replyTo: msg,
+          scene: scenes.incorrectApplicationName,
+          forceNewMessage: true,
+        })
       }
       return
     } else if (userState.state === 'loading') {
@@ -409,29 +442,36 @@ async function goToMainMenu(
   const savedApplications = getSavedApplications(
     telegramUserId ?? message.from.id,
   )
-  await goToScene(
-    message,
-    scenes.mainMenu,
+  await goToScene({
+    replyTo: message,
+    scene: scenes.mainMenu,
     forceNewMessage,
-    savedApplications.map((a) => [
+    additionalButtons: savedApplications.map((a) => [
       {
         text: a.name + ' (' + a.referenceNumber + ')',
         callback_data: 'application_' + a.referenceNumber,
       },
     ]),
-  )
+  })
 }
 
 function getSavedApplications(telegramUserId: number) {
   return userDb.get(telegramUserId)?.savedApplications ?? []
 }
 
-async function goToScene(
-  replyTo: TelegramBot.Message,
-  scene: SceneConfig,
+async function goToScene({
+  replyTo,
+  scene,
   forceNewMessage = false,
-  additionalButtons?: TelegramBot.InlineKeyboardButton[][],
-) {
+  additionalButtons,
+  telegramUserId,
+}: {
+  replyTo: TelegramBot.Message
+  scene: SceneConfig
+  forceNewMessage?: boolean
+  additionalButtons?: TelegramBot.InlineKeyboardButton[][]
+  telegramUserId?: number
+}) {
   if (!replyTo.from) return null
   const replyMarkup: TelegramBot.InlineKeyboardMarkup = {
     inline_keyboard: [
@@ -441,9 +481,13 @@ async function goToScene(
   }
   if (forceNewMessage) {
     try {
-      const msg = await bot.sendMessage(replyTo.from.id, scene.text, {
-        reply_markup: replyMarkup,
-      })
+      const msg = await bot.sendMessage(
+        telegramUserId ?? replyTo.from.id,
+        scene.text,
+        {
+          reply_markup: replyMarkup,
+        },
+      )
       return msg.message_id
     } catch (e) {
       console.error(e)
@@ -459,9 +503,13 @@ async function goToScene(
       return replyTo.message_id
     } catch {
       try {
-        const msg = await bot.sendMessage(replyTo.from.id, scene.text, {
-          reply_markup: replyMarkup,
-        })
+        const msg = await bot.sendMessage(
+          telegramUserId ?? replyTo.from.id,
+          scene.text,
+          {
+            reply_markup: replyMarkup,
+          },
+        )
         return msg.message_id
       } catch (e) {
         console.error(e)
@@ -486,16 +534,28 @@ bot.on('callback_query', async (query) => {
     case 'add_tracking': {
       const savedApplication = getSavedApplications(query.from.id)
       if (savedApplication.length >= 5) {
-        await goToScene(query.message, scenes.tooManyApplications)
+        await goToScene({
+          replyTo: query.message,
+          scene: scenes.tooManyApplications,
+          telegramUserId: query.from.id,
+        })
       } else {
         userStates.set(query.from.id, { state: 'input_reference_number' })
-        await goToScene(query.message, scenes.inputReferenceNumber)
+        await goToScene({
+          replyTo: query.message,
+          scene: scenes.inputReferenceNumber,
+          telegramUserId: query.from.id,
+        })
       }
       break
     }
     case 'about':
       userStates.delete(query.from.id)
-      await goToScene(query.message, scenes.about)
+      await goToScene({
+        replyTo: query.message,
+        scene: scenes.about,
+        telegramUserId: query.from.id,
+      })
       break
     case 'back_to_birthday_date': {
       if (!userState || userState.state !== 'input_application_name') {
@@ -505,7 +565,11 @@ bot.on('callback_query', async (query) => {
         state: 'input_date_of_birth',
         referenceNumber: userState?.referenceNumber ?? '',
       })
-      await goToScene(query.message, scenes.inputDateOfBirth)
+      await goToScene({
+        replyTo: query.message,
+        scene: scenes.inputDateOfBirth,
+        telegramUserId: query.from.id,
+      })
       break
     }
     case undefined:
@@ -530,30 +594,37 @@ bot.on('callback_query', async (query) => {
           break
         }
         if (query.data.startsWith('application_')) {
-          await goToScene(query.message, scenes.applicationMenu, false, [
-            [
-              {
-                text: 'Проверить статус заявки',
-                callback_data: 'status_' + referenceNumber,
-              },
+          await goToScene({
+            replyTo: query.message,
+            scene: scenes.applicationMenu,
+            forceNewMessage: false,
+            additionalButtons: [
+              [
+                {
+                  text: 'Проверить статус заявки',
+                  callback_data: 'status_' + referenceNumber,
+                },
+              ],
+              [
+                {
+                  text: 'Удалить',
+                  callback_data: 'delete_' + referenceNumber,
+                },
+              ],
             ],
-            [
-              {
-                text: 'Удалить',
-                callback_data: 'delete_' + referenceNumber,
-              },
-            ],
-          ])
+            telegramUserId: query.from.id,
+          })
         } else if (query.data.startsWith('status_')) {
           userStates.set(query.from.id, {
             state: 'loading',
             editMessageId: null,
           })
-          const messageId = await goToScene(
-            query.message,
-            scenes.fetchingApplicationStatus,
-            false,
-          )
+          const messageId = await goToScene({
+            replyTo: query.message,
+            scene: scenes.fetchingApplicationStatus,
+            forceNewMessage: false,
+            telegramUserId: query.from.id,
+          })
           userStates.set(query.from.id, {
             state: 'loading',
             editMessageId: messageId,
