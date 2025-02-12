@@ -77,6 +77,7 @@ const statuses: { [key: string]: string } = {
   'Passport ready to dispatch': 'Рассмотрено; в пути из Москвы в Ереван',
   'Dispatched via courie': 'Готово к получению в Ереване',
   'Delivered at Counter': 'Готово к получению в Ереван',
+  'Application In Progress': 'Обработка заявления',
 }
 
 const errors: { [key: string]: string } = {
