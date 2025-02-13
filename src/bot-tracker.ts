@@ -776,10 +776,12 @@ async function fetchApplicationStatus({
       message_id: userState.editMessageId,
       chat_id: telegramUserId,
       reply_markup: replyMarkup,
+      disable_web_page_preview: true,
     })
   } else {
     await bot.sendMessage(telegramUserId, text, {
       reply_markup: replyMarkup,
+      disable_web_page_preview: true,
     })
   }
   userStates.delete(telegramUserId)
