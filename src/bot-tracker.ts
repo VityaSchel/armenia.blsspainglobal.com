@@ -412,6 +412,7 @@ bot.on('message', async (msg) => {
           telegramUserId: msg.from.id,
           referenceNumber: userState.referenceNumber,
           dateOfBirth: userState.dateOfBirth,
+          showDonateBanner: true,
         })
       } else {
         await goToScene({
@@ -634,6 +635,7 @@ bot.on('callback_query', async (query) => {
             telegramUserId: query.from.id,
             referenceNumber: savedApplication.referenceNumber,
             dateOfBirth: new Date(savedApplication.dateOfBirth),
+            showDonateBanner: true,
           })
         } else if (query.data.startsWith('delete_')) {
           if (!userDb.has(query.from.id)) {
@@ -661,11 +663,13 @@ async function fetchApplicationStatus({
   telegramUserId,
   referenceNumber,
   dateOfBirth,
+  showDonateBanner,
 }: {
   name: string
   telegramUserId: number
   referenceNumber: string
   dateOfBirth: Date
+  showDonateBanner?: boolean
 }) {
   let text: string = ''
   let cacheMiss = true
@@ -698,7 +702,10 @@ async function fetchApplicationStatus({
             locale: ru,
             addSuffix: true,
           }) +
-          ')'
+          ')' +
+          (showDonateBanner
+            ? '\n\nДонат автору бота: https://hloth.dev/donate'
+            : '')
         cacheMiss = false
         saveToApplications = true
       }
@@ -709,7 +716,14 @@ async function fetchApplicationStatus({
     try {
       const status = await getApplicationStatus(referenceNumber, dateOfBirth)
       if (status.ok) {
-        text = 'Статус заявки ' + referenceNumber + ': ' + status.status
+        text =
+          'Статус заявки ' +
+          referenceNumber +
+          ': ' +
+          status.status +
+          (showDonateBanner
+            ? '\n\nДонат автору бота: https://hloth.dev/donate'
+            : '')
         cache.set(referenceNumber, {
           updatedAt: Date.now(),
           status: status.status,
