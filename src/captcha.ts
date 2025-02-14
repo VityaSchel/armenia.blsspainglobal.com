@@ -1,5 +1,5 @@
 import { JSDOM } from 'jsdom'
-import { userAgent } from './consts'
+import { userAgent } from '../consts'
 import { getCaptchaSolution, reportSolutionResult } from './captcha-solve'
 import cookie from 'cookie'
 

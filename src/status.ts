@@ -1,5 +1,5 @@
 import { format } from 'date-fns'
-import { userAgent } from './consts'
+import { userAgent } from '../consts'
 import { JSDOM } from 'jsdom'
 import { solveCaptcha } from './captcha'
 
